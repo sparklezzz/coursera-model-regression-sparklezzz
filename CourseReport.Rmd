@@ -1,0 +1,85 @@
+---
+title: 'CourseReport: Automatic or Manual Transmission for MPG?'
+author: "Xudong Zhang"
+date: "August 15, 2014"
+output:
+  pdf_document:
+    fig_height: 6
+    fig_width: 8
+fontsize: 10pt
+geometry: margin=0.5in
+---
+
+### Executive Summary
+In this report, we try to answer the following two question: (1) Is an automatic or manual transmission better for MPG (2) Quantify the MPG difference between automatic and manual transmissions. 
+
+With some analysis, we came to a conclusion that manual transmission is better than automatic for MPG. More specifically, changing from automatic to manual will bring about an increase of 2.94 in mpg.
+
+### Exploratory Analysis
+First we took a look at the data format and distribution of mtcars.
+
+``` {r}
+str(mtcars)
+```
+The plotting of dataset is shown in Figure 1. We noticed that four attributes should be regarded as factor: cyl, vs, am and gear(card attribute have too many kinds of values and we do not treat it as factor variable). Then we perform T test on the model which takes mpg as outcome and factorized am as predictor. The two-tailed Student's T-Test for the groups shows that automatic and manual cars are drawn from populations with different means (95% CI), i.e. 24.39 for manual and 17.15 for automatic transmission.
+```{r}
+t.test(mpg ~ factor(am), data = mtcars)
+```
+The plotting of this regression model is shown in Figure 2, which shows that considering only am as regressor, cars with manual transmission have higher average mpg that those with automatic transmission.
+
+
+### Regression Analysis
+We first use all attributes as regressors to fit the linear model. The following result shows that all of the regressior is not significant(p-value > 0.05).
+
+```{r}
+fit <- lm(mpg ~ factor(cyl) + disp + hp + drat + wt + qsec + factor(vs) + factor(am) 
+          + factor(gear) + carb, data = mtcars)
+summary(fit)$coef
+```
+
+Therefore, we need to pick up several influential attributes by AIC in a stepwise algorithm: 
+
+```{r}
+step_res <- step(fit,trace=0,steps=1000, direction="both")
+step_res$call
+```
+
+Three attributes are chosen by the stepwise algorithm: wt, qsec and am. Next we fit the regression model using the above three attributes:
+```{r}
+fit2 <- lm(formula = mpg ~ wt + qsec + factor(am), data = mtcars)
+coef <- summary(fit2)$coef
+coef
+intv <- coef[4, 1] + c(-1, 1) * qt(0.975, df = fit$df) * coef[4, 2]
+intv
+```
+The result shown that
+
+* All three regressors is significant.
+
+* For wt, one unit increase in wt will lead to about 4 unit decrement in mpg.
+
+* For qsec, one unit increase in qsec will lead to about 1.23 unit increment in mpg.
+
+* For wt, switching from automatic to manual transmission will lead to about 2.94 unit increment in mpg (note that for am, 0 means automatic and 1 means manual).
+
+We validate the above regression model by using the plot summary of residuals of the model, shown in Figure 3. The "Residuals vs Fitted" and "Scale-Location" charts show that there is no trend to the residuals. The Q-Q plot shows that the the errors are approximately normally distributed.
+
+### Conclusion
+From the above the analysis, we can tell that manual transmission is better than automatic for mpg with 2.94, with 95% confidence, change from -0.017 to 5.89.
+
+### Appendix
+**Figure 1 The plotting of dataset mtcars**
+```{r fig.width=6, fig.height=6}
+plot(mtcars, panel = panel.smooth)
+```
+
+**Figure 2 Box plot for the regression model mpg~factor(am)**
+```{r}
+plot(mpg ~ factor(am), data = mtcars)
+```
+
+**Figure 3 The plotting the regression with qec, wt, am as predictors and mpg as outcome**
+```{r}
+layout(matrix(c(1,2,3,4),2,2))
+plot(fit2)
+```
